@@ -27,10 +27,16 @@ MODULE_LICENSE("GPL");
 static u64 pmc_value = 1;
 static irqreturn_t apic_timer_irq(int irq, void *dev_id)
 {
+    pr_info(">>> APIC Timer Interrupt Handler Entered\n");//DEBUG
     // 读取 PMC0
     rdmsrl(IA32_PMC0, pmc_value);
     pr_info("中断读取PMU PMC0 Value: %llu\n", pmc_value);
-
+    // 读取当前计数确认 DEBUG
+    u64 current_count; //DEBUG
+    rdmsrl(X2APIC_TIMER_CUR, current_count); //DEBUG
+    pr_info("Current Count: 0x%llx\n", current_count);  //DEBUG
+    apic_write(APIC_EOI, 0); //发送EOI
+    pr_info("<<< EOI Sent, Interrupt Handler Exiting\n"); //DEBUG
     // 周期模式：中断触发后自动重载，不需手动操作
     return IRQ_HANDLED;
 }
@@ -82,8 +88,10 @@ static int __init check_x2apic_timer_init(void)
 
     // 清除原来的17-18位（Timer Mode）
     value &= ~(0x3ULL << 17);
+    value &= ~(0xFFULL);       // 清除向量位
     // 设置为Periodic (01)
     value |= (0x1ULL << 17);
+    value |= TIMER_VECTOR;      // 设置中断向量
     // 写回寄存器
     wrmsrl(X2APIC_LVT_TIMER, value);
 
@@ -115,7 +123,8 @@ static int __init check_x2apic_timer_init(void)
         pr_err("[LVT Timer] Failed to request irq %d\n", TIMER_VECTOR);
         return ret;
     }
-
+    
+    wrmsrl(X2APIC_TIMER_INIT, TIMER_INIT_COUNT);
     pr_info("[LVT Timer] Handler registered for vector 0x%x\n", TIMER_VECTOR);
 
     return 0;
@@ -123,6 +132,14 @@ static int __init check_x2apic_timer_init(void)
 
 static void __exit check_x2apic_timer_exit(void)
 {
+    // 停止定时器
+    wrmsrl(X2APIC_TIMER_INIT, 0);
+    
+    // 屏蔽定时器中断
+    u64 value;
+    rdmsrl(X2APIC_LVT_TIMER, value);
+    value |= (1ULL << 16);  // 设置Mask位
+    wrmsrl(X2APIC_LVT_TIMER, value);
     free_irq(TIMER_VECTOR, NULL);
     pr_info("x2APIC Timer module unloaded\n");
 }

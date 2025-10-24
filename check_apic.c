@@ -18,11 +18,12 @@ MODULE_LICENSE("GPL");
 #define X2APIC_LVT_TIMER   0x832
 #define X2APIC_TIMER_INIT  0x838
 #define X2APIC_TIMER_CUR   0x839  // Current Count Register
+#define X2APIC_EOI_MSR     0x80B    // x2APIC EOI寄存器
 
 #define TIMER_VECTOR 0xEC  // 中断向量
 #define IA32_PMC0    0x0C1   // PMC0 MSR
 
-#define TIMER_INIT_COUNT   0x10000  // 初始计数值，可调整
+#define TIMER_INIT_COUNT   0x100000  // 初始计数值，可调整
 
 static u64 pmc_value = 1;
 static irqreturn_t apic_timer_irq(int irq, void *dev_id)
@@ -35,7 +36,7 @@ static irqreturn_t apic_timer_irq(int irq, void *dev_id)
     u64 current_count; //DEBUG
     rdmsrl(X2APIC_TIMER_CUR, current_count); //DEBUG
     pr_info("Current Count: 0x%llx\n", current_count);  //DEBUG
-    apic_write(APIC_EOI, 0); //发送EOI
+    native_wrmsrl(X2APIC_EOI_MSR, 0);; //直接写入EOI MSR
     pr_info("<<< EOI Sent, Interrupt Handler Exiting\n"); //DEBUG
     // 周期模式：中断触发后自动重载，不需手动操作
     return IRQ_HANDLED;

@@ -20,7 +20,7 @@ MODULE_LICENSE("GPL");
 #define X2APIC_TIMER_CUR   0x839  // Current Count Register
 #define X2APIC_EOI_MSR     0x80B    // x2APIC EOI寄存器
 
-#define TIMER_VECTOR 0xEC  // 中断向量
+#define TIMER_VECTOR 0x40  // 中断向量
 #define IA32_PMC0    0x0C1   // PMC0 MSR
 
 #define TIMER_INIT_COUNT   0x100000  // 初始计数值，可调整
